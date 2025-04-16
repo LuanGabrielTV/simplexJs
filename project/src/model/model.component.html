@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+
+<body>
+    <form [formGroup]="form">
+        <h2>Programação Linear</h2>
+        <hr>
+        <div class="fields">
+            <div class="row" style="justify-content: center;">
+                <div class="col">
+                    Z =
+                </div>
+                <div class="col">
+                    <input id="a1" type="number" formControlName="a1">*X1
+                </div>
+                <div class="col">
+                    +
+                </div>
+                <div class="col">
+                    <input id="a2" type="number" formControlName="a2">*X2
+                </div>
+            </div>
+        </div>
+    </form>
+    <form>
+        <div class="row" style="justify-content: left;">
+            <h3 class="col">Restrições</h3><button class="col" (click)="addRestriction()">+</button><button class="col"
+                (click)="removeRestriction()">-</button>
+        </div>
+        <div class="row" *ngFor="let r of restrictions; index as i">
+            <div class="col">
+                <input type="number" [(ngModel)]=r.a1 [attr.name]="i*i" [ngModelOptions]="{standalone: true}">*X1
+            </div>
+            <div class="col">
+                +
+            </div>
+            <div class="col">
+                <input type="number" [(ngModel)]=r.a2 [attr.name]="(i*i)+1" [ngModelOptions]="{standalone: true}">*X2
+            </div>
+            <div class="col">
+                <select [(ngModel)]=r.eq [attr.name]="(i*i)+2" [ngModelOptions]="{standalone: true}">
+                    <option value=-1 >
+                        <p> &#60;=</p>
+                    </option>
+                    <option value=0>
+                        <p>=</p>
+                    </option>
+                    <option value=1>
+                        <p> &#62;=</p>
+                    </option>
+                </select>
+            </div>
+            <div class="col">
+                <input type="number" [(ngModel)]=r.b [attr.name]="(i*i)+3" [ngModelOptions]="{standalone: true}">
+            </div>
+        </div>
+        <div class="row">
+            <button style="background-color:rgb(54, 129, 226);" class="submit">Matemático</button>
+            <button style="background-color:rgb(15, 194, 90);" class="submit"
+                (click)="setRestrictions()">Gráfico</button>
+        </div>
+    </form>
+    <div class="chart">
+        <div id="plot"></div>
+    </div>
+</body>
+
+</html>
