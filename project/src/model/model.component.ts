@@ -13,18 +13,21 @@ declare let Plotly: any;
 export class ModelComponent implements OnInit {
   form: FormGroup;
   z: Expression | undefined;
+  zFunction: any;
+  optimization: number = 1;
   restrictions: Array<Restriction> = [];
   restrictionFunctions: Array<any> = [];
-  interestPoints: Array<{ x: number, y: number }> = [];
+  restrictionExpressions: Array<any> = [];
+  interestPoints: Array<Point> = [];
+  solution: Point | undefined;
 
   constructor(private fBuilder: FormBuilder) {
     this.z = new Expression(0, 0);
 
     this.form = this.fBuilder.group({
-      'a1': [this.z.a1, Validators.compose([
-        Validators.required])],
-      'a2': [this.z.a2, Validators.compose([
-        Validators.required])],
+      'a1': [this.z.a1, Validators.required],
+      'a2': [this.z.a2, Validators.required],
+      'optimization': [this.optimization, Validators.required]
     });
 
   }
@@ -33,7 +36,6 @@ export class ModelComponent implements OnInit {
 
     // essa função é executada na inicialização da página
 
-    this.addRestriction();
   }
 
   addRestriction() {
@@ -72,31 +74,117 @@ export class ModelComponent implements OnInit {
         const b = [r1.b, r2.b];
         const sol = math.lusolve(a, b);
         if (sol != undefined) {
-          this.interestPoints.push({ x: Number(sol[0]), y: Number(sol[1]) });
+          this.interestPoints.push(new Point(math.round(Number(sol[0])), math.round(Number(sol[1]))));
         }
-        console.log(sol);
-
       }
     }
-    this.generateGraph(traces);
+
+    this.validateRestrictions();
+
+  }
+
+  validateRestrictions() {
+    this.interestPoints.forEach((p) => {
+
+      p.z = this.zFunction(p.x, p.y);
+
+      p.valid = true;
+
+      this.restrictions.forEach((r, i) => {
+
+        let restrictionValue = this.restrictionExpressions[i](p.x, p.y);
+
+        console.log(p.x, p.y, restrictionValue, r.eq, r.b);
+
+        switch (String(r.eq)) {
+          case '-1':
+            if (Number(restrictionValue) > Number(r.b)) {
+              p.valid = false;
+            }
+            break;
+          case '0':
+            if (Number(restrictionValue) != Number(r.b)) {
+              p.valid = false;
+            }
+            break;
+          case '1':
+            if (Number(restrictionValue) < Number(r.b)) {
+              p.valid = false;
+            }
+            break;
+        }
+      });
+
+
+    })
 
   }
 
   generateFunctions() {
 
     // essa função gera os elementos do array restrictionFunctions, i.e., as funções de igualdade de cada restrição
-
-    this.restrictionFunctions = [];
     const parser = math.parser();
+
+    parser.evaluate('f(x1, x2) = ' + this.z?.a1 + '*x1 + ' + this.z?.a2 + '*x2');
+
+    this.zFunction = parser.get('f');
+
     this.restrictions.forEach((r, i) => {
       parser.evaluate('f' + i + '(x) = ' + r.b / r.a2 + '-' + r.a1 / r.a2 + '*x');
+      parser.evaluate('e' + i + '(x1, x2) = ' + r.a1 + '*x1 + ' + r.a2 + '*x2');
       this.restrictionFunctions.push(parser.get('f' + i));
+      this.restrictionExpressions.push(parser.get('e' + i));
     });
+  }
+
+  optimizeGraph() {
+
+    let smallestValue = 1e+09, greatestValue = 0;
+    let smallestPoint: Point, greatestPoint: Point;
+
+    this.interestPoints.forEach((p, i) => {
+
+      if (p.valid) {
+        if (p.z! >= greatestValue) {
+          greatestValue = p.z!;
+          greatestPoint = this.interestPoints[i];
+        }
+
+        if (p.z! <= smallestValue) {
+          smallestValue = p.z!;
+          smallestPoint = this.interestPoints[i];
+        }
+      }
+    });
+
+    if (this.optimization == 1 && greatestPoint! != undefined) {
+      if (greatestPoint!.valid) {
+        this.solution = greatestPoint!;
+      }
+    }
+
+    if (this.optimization == 0 && smallestPoint! != undefined) {
+      if (smallestPoint!.valid) {
+        this.solution = smallestPoint!;
+      }
+    }
+
+    console.log(this.solution);
+
   }
 
   setGraph() {
 
     // essa função faz o gráfico das funções e pontos
+
+    this.interestPoints = [];
+    this.restrictionFunctions = [];
+    this.restrictionExpressions = [];
+    this.solution = undefined;
+    this.zFunction = null;
+    this.z!.a1 = this.form.get('a1')?.value;
+    this.z!.a2 = this.form.get('a2')?.value;
+    this.optimization = this.form.get('optimization')?.value;
 
     this.generateFunctions();
     let functionTraces: Array<Trace> = [];
@@ -114,11 +202,13 @@ export class ModelComponent implements OnInit {
         type: 'scatter'
       });
 
-      this.interestPoints.push({ x: 0, y: f(0) });
-      this.interestPoints.push({ x: x1, y: f(x1) });
+      this.interestPoints.push(new Point(0, f(0)));
+      this.interestPoints.push(new Point(x1, f(x1)));
     });
 
     this.findInterestPoints();
+    this.optimizeGraph();
+
 
     this.interestPoints.forEach((p) => {
       pointTraces.push({
@@ -130,13 +220,14 @@ export class ModelComponent implements OnInit {
       });
     })
 
+
     this.generateGraph(functionTraces.concat(pointTraces));
   }
 
   generateGraph(traces: Array<Trace>) {
 
     // essa função plota o gráfico
-
+    Plotly.purge('plot', traces);
     Plotly.newPlot('plot', traces);
   }
 
@@ -164,6 +255,18 @@ class Restriction {
     this.a2 = a2;
     this.eq = eq;
     this.b = b;
+  }
+}
+
+class Point {
+  x: number;
+  y: number;
+  z: number | undefined;
+  valid: boolean | undefined;
+
+  constructor(x: number, y: number) {
+    this.x = x;
+    this.y = y;
   }
 }
 

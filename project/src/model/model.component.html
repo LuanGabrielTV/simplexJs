@@ -24,6 +24,15 @@
                     <input id="a2" type="number" formControlName="a2">*X2
                 </div>
             </div>
+            <div class="row" style="justify-content: center;">
+                <div class="col">
+
+                </div>
+                <select id="otimization" [value]=1 formControlName="optimization">
+                    <option value=1>Maximizar</option>
+                    <option value=0>Minimizar</option>
+                </select>
+            </div>
         </div>
     </form>
     <form>
@@ -43,7 +52,7 @@
             </div>
             <div class="col">
                 <select [(ngModel)]=r.eq [attr.name]="(i*i)+2" [ngModelOptions]="{standalone: true}">
-                    <option value=-1 >
+                    <option value=-1>
                         <p> &#60;=</p>
                     </option>
                     <option value=0>
@@ -60,12 +69,31 @@
         </div>
         <div class="row">
             <button style="background-color:rgb(54, 129, 226);" class="submit">Matemático</button>
-            <button style="background-color:rgb(15, 194, 90);" class="submit"
-                (click)="setGraph()">Gráfico</button>
+            <button style="background-color:rgb(15, 194, 90);" class="submit" (click)="setGraph()">Gráfico</button>
         </div>
     </form>
     <div class="chart">
         <div id="plot"></div>
+    </div>
+    <div class="row" style="justify-content: center;">
+        <p *ngIf="this.interestPoints.length!=0 && this.solution == undefined">O problema não tem solução ótima</p>
+        <p *ngIf="this.solution != undefined">Uma possível solução é ({{this.solution.x}}, {{this.solution.y}})</p>
+    </div>
+    <div class="table" *ngIf="this.interestPoints.length!=0">
+        <table>
+            <thead>
+                <th>x1</th>
+                <th>x2</th>
+                <th>Z</th>
+            </thead>
+            <tbody>
+                <tr *ngFor="let p of this.interestPoints" [ngClass]="{'invalid': p != this.solution, 'valid' : p == this.solution}">
+                    <td>{{p.x}}</td>
+                    <td>{{p.y}}</td>
+                    <td>{{p.z!}}</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </body>
 
