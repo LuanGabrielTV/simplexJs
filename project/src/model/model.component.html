@@ -75,25 +75,30 @@
     <div class="chart">
         <div id="plot"></div>
     </div>
-    <div class="row" style="justify-content: center;">
-        <p *ngIf="this.interestPoints.length!=0 && this.solution == undefined">O problema não tem solução ótima</p>
-        <p *ngIf="this.solution != undefined">Uma possível solução é ({{this.solution.x}}, {{this.solution.y}})</p>
-    </div>
-    <div class="table" *ngIf="this.interestPoints.length!=0">
-        <table>
-            <thead>
-                <th>x1</th>
-                <th>x2</th>
-                <th>Z</th>
-            </thead>
-            <tbody>
-                <tr *ngFor="let p of this.interestPoints" [ngClass]="{'invalid': p != this.solution, 'valid' : p == this.solution}">
-                    <td>{{p.x}}</td>
-                    <td>{{p.y}}</td>
-                    <td>{{p.z!}}</td>
-                </tr>
-            </tbody>
-        </table>
+    <div *ngIf="isUsingGraphMethod">
+        <div class="row" style="justify-content: center;">
+            <p *ngIf="this.interestPoints.length!=0 && this.graphSolution == undefined">O problema não tem solução ótima
+            </p>
+            <p *ngIf="this.graphSolution != undefined">Uma possível solução é ({{this.graphSolution.x}},
+                {{this.graphSolution.y}})</p>
+        </div>
+        <div class="table" *ngIf="this.interestPoints.length!=0">
+            <table>
+                <thead>
+                    <th>x1</th>
+                    <th>x2</th>
+                    <th>Z</th>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let p of this.interestPoints"
+                        [ngClass]="{'invalid': p != this.graphSolution, 'valid' : p == this.graphSolution}">
+                        <td>{{p.x}}</td>
+                        <td>{{p.y}}</td>
+                        <td>{{p.z!}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </body>
 

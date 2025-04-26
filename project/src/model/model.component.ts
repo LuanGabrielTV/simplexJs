@@ -19,7 +19,11 @@ export class ModelComponent implements OnInit {
   restrictionFunctions: Array<any> = [];
   restrictionExpressions: Array<any> = [];
   interestPoints: Array<Point> = [];
-  solution: Point | undefined;
+  graphSolution: Point | undefined;
+
+  // essa variável define se mostra o método gráfico na tela
+
+  isUsingGraphMethod = false;
 
   constructor(private fBuilder: FormBuilder) {
     this.z = new Expression(0, 0);
@@ -159,17 +163,15 @@ export class ModelComponent implements OnInit {
 
     if (this.optimization == 1 && greatestPoint! != undefined) {
       if (greatestPoint!.valid) {
-        this.solution = greatestPoint!;
+        this.graphSolution = greatestPoint!;
       }
     }
 
     if (this.optimization == 0 && smallestPoint! != undefined) {
       if (smallestPoint!.valid) {
-        this.solution = smallestPoint!;
+        this.graphSolution = smallestPoint!;
       }
     }
-
-    console.log(this.solution);
 
   }
 
@@ -177,10 +179,19 @@ export class ModelComponent implements OnInit {
 
     // essa função faz o gráfico das funções e pontos
 
+    if(this.isUsingGraphMethod){
+      this.isUsingGraphMethod = false;
+      this.removeGraph();
+      return;
+    }else{
+      this.isUsingGraphMethod = true;
+    }
+
+
     this.interestPoints = [];
     this.restrictionFunctions = [];
     this.restrictionExpressions = [];
-    this.solution = undefined;
+    this.graphSolution = undefined;
     this.zFunction = null;
     this.z!.a1 = this.form.get('a1')?.value;
     this.z!.a2 = this.form.get('a2')?.value;
@@ -224,11 +235,32 @@ export class ModelComponent implements OnInit {
     this.generateGraph(functionTraces.concat(pointTraces));
   }
 
+  setMath() {
+
+    this.zFunction = null;
+    this.z!.a1 = this.form.get('a1')?.value;
+    this.z!.a2 = this.form.get('a2')?.value;
+    this.optimization = this.form.get('optimization')?.value;
+
+    this.generateFunctions();
+
+    // essa função faz o método matemático
+
+  }
+
   generateGraph(traces: Array<Trace>) {
 
     // essa função plota o gráfico
+
     Plotly.purge('plot', traces);
     Plotly.newPlot('plot', traces);
+  }
+
+  removeGraph() {
+
+    // essa função remove o gráfico
+
+    Plotly.purge('plot');
   }
 
 }
