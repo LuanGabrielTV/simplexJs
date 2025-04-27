@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import * as math from 'mathjs';
+import SimpleSimplex from 'simple-simplex';
 declare let Plotly: any;
 
 @Component({
@@ -27,7 +28,6 @@ export class ModelComponent implements OnInit {
 
   constructor(private fBuilder: FormBuilder) {
     this.z = new Expression(0, 0);
-
     this.form = this.fBuilder.group({
       'a1': [this.z.a1, Validators.required],
       'a2': [this.z.a2, Validators.required],
@@ -179,11 +179,11 @@ export class ModelComponent implements OnInit {
 
     // essa função faz o gráfico das funções e pontos
 
-    if(this.isUsingGraphMethod){
+    if (this.isUsingGraphMethod) {
       this.isUsingGraphMethod = false;
       this.removeGraph();
       return;
-    }else{
+    } else {
       this.isUsingGraphMethod = true;
     }
 
