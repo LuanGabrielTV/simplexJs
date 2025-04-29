@@ -68,7 +68,7 @@
             </div>
         </div>
         <div class="row">
-            <button style="background-color:rgb(54, 129, 226);" class="submit">Matemático</button>
+            <button style="background-color:rgb(54, 129, 226);" class="submit" (click)="setMath()">Matemático</button>
             <button style="background-color:rgb(15, 194, 90);" class="submit" (click)="setGraph()">Gráfico</button>
         </div>
     </form>
@@ -100,6 +100,34 @@
             </table>
         </div>
     </div>
+    <div *ngIf="isUsingMathMethod" class="solution-math">
+        <div class="row" style="justify-content: center;">
+
+            <p class="solution-text">
+                Uma possível solução é ({{ mathSolution.x }}, {{ mathSolution.y }})
+            </p>
+        </div>
+        <div class="table">
+            <table>
+              <thead>
+                <tr>
+                  <th>x1</th>
+                  <th>x2</th>
+                  <th>Z</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ mathSolution.x }}</td>
+                  <td>{{ mathSolution.y }}</td>
+                  <td>{{ mathSolution.z }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+    </div>
+
+
 </body>
 
 </html>

@@ -21,10 +21,13 @@ export class ModelComponent implements OnInit {
   restrictionExpressions: Array<any> = [];
   interestPoints: Array<Point> = [];
   graphSolution: Point | undefined;
+  mathSolution: any;
+
 
   // essa variável define se mostra o método gráfico na tela
 
   isUsingGraphMethod = false;
+  isUsingMathMethod = false;
 
   constructor(private fBuilder: FormBuilder) {
     this.z = new Expression(0, 0);
@@ -182,11 +185,15 @@ export class ModelComponent implements OnInit {
     if (this.isUsingGraphMethod) {
       this.isUsingGraphMethod = false;
       this.removeGraph();
+      this.mathSolution = undefined;
       return;
     } else {
       this.isUsingGraphMethod = true;
+      this.isUsingMathMethod = false; // <-- ADICIONA ESSA LINHA
+
     }
 
+    this.mathSolution = false; // <-- Aqui também limpa quando entra no modo gráfico
 
     this.interestPoints = [];
     this.restrictionFunctions = [];
@@ -236,16 +243,216 @@ export class ModelComponent implements OnInit {
   }
 
   setMath() {
+    this.removeGraph();
+    this.isUsingMathMethod = false;
 
-    this.zFunction = null;
-    this.z!.a1 = this.form.get('a1')?.value;
-    this.z!.a2 = this.form.get('a2')?.value;
+    const a1 = this.form.get('a1')?.value;
+    const a2 = this.form.get('a2')?.value;
     this.optimization = this.form.get('optimization')?.value;
 
-    this.generateFunctions();
+    if (a1 === undefined || a2 === undefined) {
+      console.error("Coeficientes a1 e a2 não podem ser indefinidos.");
+      return;
+    }
 
-    // essa função faz o método matemático
+    if (this.restrictions.some(r => r.a1 === undefined || r.a2 === undefined || r.b === undefined)) {
+      console.error("Existem restrições incompletas.");
+      return;
+    }
 
+    console.log('Restrições recebidas:', this.restrictions);
+
+    const constraints = this.restrictions.map(r => ({
+      a: r.a1 ?? 0,
+      b: r.a2 ?? 0,
+      eq: r.eq, 
+      c: r.b,
+    }));
+
+    const optimizationType = this.optimization === 1 ? 'max' : 'min';
+    console.log('Objective:', { a: a1, b: a2 });
+    console.log('Constraints:', constraints);
+
+    const tol = 1e-6;
+
+    if (optimizationType === 'max') {
+      const candidates: { x: number, y: number }[] = [];
+
+      for (let i = 0; i < constraints.length; i++) {
+        for (let j = i + 1; j < constraints.length; j++) {
+          const c1 = constraints[i];
+          const c2 = constraints[j];
+          const det = c1.a * c2.b - c2.a * c1.b;
+          if (Math.abs(det) > tol) {
+            const x = (c1.c * c2.b - c2.c * c1.b) / det;
+            const y = (c1.a * c2.c - c2.a * c1.c) / det;
+            if (isFinite(x) && isFinite(y)) {
+              candidates.push({ x, y });
+            }
+          }
+        }
+      }
+
+      constraints.forEach(c => {
+        if (c.a !== 0) {
+          const x = c.c / c.a;
+          if (isFinite(x)) candidates.push({ x, y: 0 });
+        }
+        if (c.b !== 0) {
+          const y = c.c / c.b;
+          if (isFinite(y)) candidates.push({ x: 0, y });
+        }
+      });
+
+      console.log("Candidatos inicias:", candidates);
+
+      const feasible = candidates
+        .filter((p, index, self) => {
+          return index === self.findIndex(q =>
+            Math.abs(p.x - q.x) < 1e-6 && Math.abs(p.y - q.y) < 1e-6
+          );
+        })
+        .filter(p => {
+          console.log(`Verificando ponto (${p.x}, ${p.y})`);
+
+          let satisfiesAll = true;
+          for (const c of constraints) {
+            const lhs = c.a * p.x + c.b * p.y;
+
+            if (Number(c.eq) === 1 && lhs < c.c - 1e-6) { // >=
+              satisfiesAll = false;
+              break;
+            }
+            if (Number(c.eq) === 0 && Math.abs(lhs - c.c) > 1e-6) { // =
+              satisfiesAll = false;
+              break;
+            }
+            if (Number(c.eq) === -1 && lhs > c.c + 1e-6) { // <=
+              satisfiesAll = false;
+              break;
+            }
+          }
+
+          if (!satisfiesAll) {
+            console.log(`Ponto descartado: (${p.x}, ${p.y}) não atende a todas as restricoes`);
+          } else {
+            console.log(`Ponto aceito: (${p.x}, ${p.y}) atende todas as restrices.`);
+          }
+
+          return satisfiesAll && p.x >= -1e-6 && p.y >= -1e-6;
+        });
+
+      let bestPoint = feasible[0];
+      let bestValue = a1 * bestPoint.x + a2 * bestPoint.y;
+
+      for (const p of feasible) {
+        const value = a1 * p.x + a2 * p.y;
+        if (value > bestValue) { 
+          bestPoint = p;
+          bestValue = value;
+        }
+      }
+
+      console.log("Solução de Maximização:", bestPoint, "Valor:", bestValue);
+
+      this.isUsingMathMethod = true;
+      this.isUsingGraphMethod = false;
+      this.mathSolution = {
+        x: bestPoint.x,
+        y: bestPoint.y,
+        z: bestValue,
+      };
+
+
+    } else {
+      const candidates: { x: number, y: number }[] = [];
+
+      for (let i = 0; i < constraints.length; i++) {
+        for (let j = i + 1; j < constraints.length; j++) {
+          const c1 = constraints[i];
+          const c2 = constraints[j];
+          const det = c1.a * c2.b - c2.a * c1.b;
+          if (Math.abs(det) > tol) {
+            const x = (c1.c * c2.b - c2.c * c1.b) / det;
+            const y = (c1.a * c2.c - c2.a * c1.c) / det;
+            if (isFinite(x) && isFinite(y)) {
+              candidates.push({ x, y });
+            }
+          }
+        }
+      }
+
+      constraints.forEach(c => {
+        if (c.a !== 0) {
+          const x = c.c / c.a;
+          if (isFinite(x)) candidates.push({ x, y: 0 });
+        }
+        if (c.b !== 0) {
+          const y = c.c / c.b;
+          if (isFinite(y)) candidates.push({ x: 0, y });
+        }
+      });
+
+      console.log("Candidatos inicias:", candidates);
+
+      const feasible = candidates
+        .filter((p, index, self) => {
+          return index === self.findIndex(q =>
+            Math.abs(p.x - q.x) < 1e-6 && Math.abs(p.y - q.y) < 1e-6
+          );
+        })
+        .filter(p => {
+          console.log(`verificando ponto (${p.x}, ${p.y})`);
+
+          let satisfiesAll = true;
+          for (const c of constraints) {
+            const lhs = c.a * p.x + c.b * p.y;
+
+            if (Number(c.eq) === 1 && lhs < c.c - 1e-6) { 
+              satisfiesAll = false;
+              break;
+            }
+            if (Number(c.eq) === 0 && Math.abs(lhs - c.c) > 1e-6) { 
+              satisfiesAll = false;
+              break;
+            }
+            if (Number(c.eq) === -1 && lhs > c.c + 1e-6) { 
+              satisfiesAll = false;
+              break;
+            }
+
+          }
+
+          if (!satisfiesAll) {
+            console.log(`Ponto descartado: (${p.x}, ${p.y}) não atende a todas as restrições.`);
+          } else {
+            console.log(`Ponto aceito: (${p.x}, ${p.y}) atende todas as restrições.`);
+          }
+
+          return satisfiesAll && p.x >= -1e-6 && p.y >= -1e-6;
+        });
+
+      let bestPoint = feasible[0];
+      let bestValue = a1 * bestPoint.x + a2 * bestPoint.y;
+
+      for (const p of feasible) {
+        const value = a1 * p.x + a2 * p.y;
+        if (value < bestValue) {
+          bestPoint = p;
+          bestValue = value;
+        }
+      }
+
+      console.log("Solução de Minimização:", bestPoint, "Valor:", bestValue);
+
+      this.isUsingMathMethod = true;
+      this.isUsingGraphMethod = false;
+      this.mathSolution = {
+        x: bestPoint.x,
+        y: bestPoint.y,
+        z: bestValue,
+      };
+    }
   }
 
   generateGraph(traces: Array<Trace>) {
@@ -264,6 +471,7 @@ export class ModelComponent implements OnInit {
   }
 
 }
+
 
 class Expression {
   a1: number;
@@ -299,6 +507,7 @@ class Point {
   constructor(x: number, y: number) {
     this.x = x;
     this.y = y;
+    this.valid = true;
   }
 }
 
